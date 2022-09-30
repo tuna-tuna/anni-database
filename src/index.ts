@@ -2,9 +2,11 @@ import mineflayer from 'mineflayer';
 import { default as axios } from 'axios';
 import { exit } from 'process';
 import { getPlayerInfo } from './utils/playerInfo';
+import { FireStore } from './utils/db';
+import { FirebaseOptions } from 'firebase/app';
 const wait = require('util').promisify(setTimeout);
 require('dotenv').config();
-const { MCUN, MCPW } = process.env;
+const { MCUN, MCPW, API_KEY, AUTH_DOMAIN, PROJECT_ID, STORAGE_BUCKET, MESSAGING_SENDER_ID, APP_ID, MEASUREMENT_ID } = process.env;
 
 let isConnected = false;
 const mcidRegex = /^[a-z|A-Z|0-9|_]{2,16}$/g;
@@ -14,6 +16,20 @@ if (MCUN === undefined || MCPW === undefined) {
     console.log('MC Username or Password cannot be read!');
     exit(1);
 }
+
+const fireStoreConfig: FirebaseOptions = {
+    apiKey: API_KEY,
+    authDomain: AUTH_DOMAIN,
+    projectId: PROJECT_ID,
+    storageBucket: STORAGE_BUCKET,
+    messagingSenderId: MESSAGING_SENDER_ID,
+    appId: APP_ID,
+    measurementId: MEASUREMENT_ID
+}
+
+console.log(fireStoreConfig);
+
+const fireStore = new FireStore(fireStoreConfig);
 
 const bot = mineflayer.createBot({
     host: 'play.shotbow.net',
@@ -60,6 +76,7 @@ bot.on('playerJoined', async (player) => {
             return;
         }
         const playerInfo = await getPlayerInfo(uuid);
+        await fireStore.set(playerInfo);
         console.dir(playerInfo, { depth: null });
     }
 });

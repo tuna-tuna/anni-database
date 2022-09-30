@@ -21,6 +21,7 @@
     "dependencies": {
         "axios": "^0.27.2",
         "dotenv": "^16.0.3",
+        "firebase": "^9.10.0",
         "mineflayer": "^4.4.0"
     }
 }
