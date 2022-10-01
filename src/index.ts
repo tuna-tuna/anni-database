@@ -1,18 +1,17 @@
 import mineflayer from 'mineflayer';
-import { default as axios } from 'axios';
 import { exit } from 'process';
 import { getPlayerInfo } from './utils/playerInfo';
 import { FireStore } from './utils/db';
 import { FirebaseOptions } from 'firebase/app';
 const wait = require('util').promisify(setTimeout);
 require('dotenv').config();
-const { MCUN, MCPW, API_KEY, AUTH_DOMAIN, PROJECT_ID, STORAGE_BUCKET, MESSAGING_SENDER_ID, APP_ID, MEASUREMENT_ID } = process.env;
+const { MCUN, MCPW, API_KEY, AUTH_DOMAIN, PROJECT_ID, STORAGE_BUCKET, MESSAGING_SENDER_ID, APP_ID, MEASUREMENT_ID, FB_EMAIL, FB_PASS } = process.env;
 
 let isConnected = false;
 const mcidRegex = /^[a-z|A-Z|0-9|_]{2,16}$/g;
 
 // check env is not undefined
-if (MCUN === undefined || MCPW === undefined) {
+if (MCUN === undefined || MCPW === undefined || FB_EMAIL === undefined || FB_PASS === undefined) {
     console.log('MC Username or Password cannot be read!');
     exit(1);
 }
@@ -27,9 +26,7 @@ const fireStoreConfig: FirebaseOptions = {
     measurementId: MEASUREMENT_ID
 }
 
-console.log(fireStoreConfig);
-
-const fireStore = new FireStore(fireStoreConfig);
+const fireStore = new FireStore(fireStoreConfig, FB_EMAIL, FB_PASS);
 
 const bot = mineflayer.createBot({
     host: 'play.shotbow.net',
@@ -76,7 +73,9 @@ bot.on('playerJoined', async (player) => {
             return;
         }
         const playerInfo = await getPlayerInfo(uuid);
+        if (typeof playerInfo === 'undefined') {
+            return;
+        }
         await fireStore.set(playerInfo);
-        console.dir(playerInfo, { depth: null });
     }
 });
