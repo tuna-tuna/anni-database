@@ -28,5 +28,6 @@ export const getPlayerInfo = async (uuid: string) => {
         return playerInfo;
     } catch (e) {
         console.error('Error in getPlayerInfo: \n', e);
+        await axios.get(`https://laby.net/@${uuid}`);
     }
 }

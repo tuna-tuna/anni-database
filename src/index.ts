@@ -1,4 +1,6 @@
 import mineflayer from 'mineflayer';
+import fastify from 'fastify';
+import cors from '@fastify/cors';
 import { exit } from 'process';
 import { getPlayerInfo } from './utils/playerInfo';
 import { FireStore } from './utils/db';
@@ -27,6 +29,13 @@ const fireStoreConfig: FirebaseOptions = {
 }
 
 const fireStore = new FireStore(fireStoreConfig, FB_EMAIL, FB_PASS);
+
+const server = fastify({
+    logger: true
+});
+(async () => {
+    await server.register(cors);
+})();
 
 const bot = mineflayer.createBot({
     host: 'play.shotbow.net',
@@ -79,3 +88,25 @@ bot.on('playerJoined', async (player) => {
         await fireStore.set(playerInfo);
     }
 });
+
+server.get('/api/playerdata', async (request, reply) => {
+    const playerInfo = await fireStore.get();
+    if (typeof playerInfo === 'undefined') {
+        reply.code(400);
+        return { data: 'Error' };
+    }
+    reply.type('application/json').code(200);
+    return { data: playerInfo };
+});
+
+const startServer =async () => {
+    try {
+        await server.listen({ port: 2999 });
+    } catch (e) {
+        console.error('Error while listening to requests: \n', e);
+        bot.end();
+        exit(1);
+    }
+}
+
+startServer();

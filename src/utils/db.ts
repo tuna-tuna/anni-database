@@ -1,5 +1,5 @@
 import { FirebaseApp, FirebaseOptions, initializeApp } from 'firebase/app';
-import { doc, Firestore, getDoc, getFirestore, setDoc } from 'firebase/firestore';
+import { collection, doc, Firestore, getDoc, getDocs, getFirestore, setDoc } from 'firebase/firestore';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 
 export class FireStore{
@@ -8,8 +8,11 @@ export class FireStore{
     private db: Firestore;
     private auth;
     private isLoggedIn: boolean;
+    private cachedData: PlayerInfo[] | undefined
+    private lastModified: number
     constructor(config: FirebaseOptions, email: string, password: string) {
         this.isLoggedIn = false;
+        this.lastModified = 0;
         this.fireStoreConfig = config;
         this.app = initializeApp(this.fireStoreConfig);
         this.db = getFirestore(this.app);
@@ -55,6 +58,31 @@ export class FireStore{
             }
         } catch (e) {
             console.error('Error while setting playerInfo record: \n', e, '\nplayerInfo: \n', playerInfo);
+        }
+    }
+
+    async get(): Promise<PlayerInfo[] | undefined> {
+        if (!this.isLoggedIn) {
+            return;
+        }
+        if (Date.now() - this.lastModified < 3600000) {
+            console.log('Used Cached Data');
+            return this.cachedData;
+        } else {       
+            try {
+                const data = await getDocs(collection(this.db, 'names'));
+                const reqdata: PlayerInfo[] = [];
+                data.forEach((doc) => {
+                    const playerData = doc.data() as PlayerInfo;
+                    reqdata.push(playerData);
+                });
+                this.lastModified = Date.now();
+                this.cachedData = reqdata;
+                console.log('Created Cache');
+                return reqdata;
+            } catch (e) {
+                console.error('Error while getting playerInfo: \n', e);
+            }
         }
     }
 }
