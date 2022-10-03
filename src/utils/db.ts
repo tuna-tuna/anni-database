@@ -45,8 +45,8 @@ export class FireStore{
                             newData.history[index].hidden = false;
                             newData.history[index].mcid = playerInfo.history[index].mcid;
                         }
-                        index++;
                     }
+                    index++;
                 });
             }
 
@@ -83,6 +83,28 @@ export class FireStore{
             } catch (e) {
                 console.error('Error while getting playerInfo: \n', e);
             }
+        }
+    }
+
+    async toggleFavorite(uuid: string): Promise<boolean>{
+        if (!this.isLoggedIn) {
+            return false;
+        }
+        try {
+            const docRef = doc(this.db, 'names', uuid);
+            const docSnap = await getDoc(docRef);
+            if (!docSnap.exists()) {
+                console.error(`UUID of ${uuid} does not exist on database\n`);
+                return false;
+            }
+            const data = docSnap.data() as PlayerInfo;
+            let newData = data;
+            newData.isFavorite = !data.isFavorite;
+            await setDoc(docRef, newData);
+            return true;
+        } catch (e) {
+            console.error('Error occured while toggle-int favorite\n', e);
+            return false;
         }
     }
 }

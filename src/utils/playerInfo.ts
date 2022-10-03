@@ -20,9 +20,17 @@ export const getPlayerInfo = async (uuid: string) => {
             };
             nameHistory.push(namedata);
         });
+        const date = new Date();
+        const currentUNIX = Date.now();
+        const currentDate = date.getFullYear().toString() + '/' + (date.getMonth() + 1).toString() + '/' + date.getDate().toString() + ' ' + date.getHours().toString + ':' + date.getMinutes().toString();
         const playerInfo: PlayerInfo = {
             mcid: res.data.user.username,
             uuid: uuid,
+            lastSeenRaw: currentUNIX,
+            lastSeen: currentDate,
+            lastUpdateRaw: currentUNIX,
+            lastUpdate: currentDate,
+            isFavorite: false,
             history: nameHistory
         }
         return playerInfo;
