@@ -99,6 +99,17 @@ server.get('/api/playerdata', async (request, reply) => {
     return { data: playerInfo };
 });
 
+server.get<{ Params: { uuid: string } }>('/api/favorite/:uuid', async (requst, reply) => {
+    const uuid = requst.params.uuid;
+    const result = await fireStore.toggleFavorite(uuid);
+    if (!result) {
+        reply.code(400);
+        return { data: 'Error' };
+    }
+    reply.code(200);
+    return { data: 'Success' };
+});
+
 const startServer =async () => {
     try {
         await server.listen({ port: 2999 });
