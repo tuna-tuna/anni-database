@@ -20,6 +20,7 @@ export class FireStore{
         signInWithEmailAndPassword(this.auth, email, password).then(() => this.isLoggedIn = true);
     };
 
+    // set the player info
     async set(playerInfo: PlayerInfo): Promise<void> {
         if (!this.isLoggedIn) {
             return;
@@ -61,6 +62,7 @@ export class FireStore{
         }
     }
 
+    // get all player info from db
     async get(): Promise<PlayerInfo[] | undefined> {
         if (!this.isLoggedIn) {
             return;
@@ -86,6 +88,7 @@ export class FireStore{
         }
     }
 
+    // toggle favorite on db
     async toggleFavorite(uuid: string): Promise<boolean>{
         if (!this.isLoggedIn) {
             return false;
@@ -105,6 +108,32 @@ export class FireStore{
         } catch (e) {
             console.error('Error occured while toggle-int favorite\n', e);
             return false;
+        }
+    }
+
+    // get the amount of saved data on db
+    async getPlayerAmount(): Promise<number>{
+        if (!this.isLoggedIn) {
+            return 0;
+        }
+        if (Date.now() - this.lastModified < 3600000 && typeof this.cachedData !== 'undefined') {
+            return this.cachedData.length;
+        } else {       
+            try {
+                const data = await getDocs(collection(this.db, 'names'));
+                const reqdata: PlayerInfo[] = [];
+                data.forEach((doc) => {
+                    const playerData = doc.data() as PlayerInfo;
+                    reqdata.push(playerData);
+                });
+                this.lastModified = Date.now();
+                this.cachedData = reqdata;
+                console.log('Created Cache');
+                return reqdata.length;
+            } catch (e) {
+                console.error('Error while getting playerInfo: \n', e);
+                return 0;
+            }
         }
     }
 }

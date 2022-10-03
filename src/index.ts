@@ -5,7 +5,6 @@ import { exit } from 'process';
 import { getPlayerInfo } from './utils/playerInfo';
 import { FireStore } from './utils/db';
 import { FirebaseOptions } from 'firebase/app';
-const wait = require('util').promisify(setTimeout);
 require('dotenv').config();
 const { MCUN, MCPW, API_KEY, AUTH_DOMAIN, PROJECT_ID, STORAGE_BUCKET, MESSAGING_SENDER_ID, APP_ID, MEASUREMENT_ID, FB_EMAIL, FB_PASS } = process.env;
 
@@ -18,6 +17,7 @@ if (MCUN === undefined || MCPW === undefined || FB_EMAIL === undefined || FB_PAS
     exit(1);
 }
 
+// some initializations
 const fireStoreConfig: FirebaseOptions = {
     apiKey: API_KEY,
     authDomain: AUTH_DOMAIN,
@@ -46,6 +46,7 @@ const bot = mineflayer.createBot({
     viewDistance: 'tiny'
 });
 
+// mineflayer events
 bot.on('kicked', (reason, loggedIn) => {
     if (reason === '{"text":"Too many players joining at once! Try again in a few seconds."}') {
         console.log('Server is busy now.');
@@ -62,6 +63,8 @@ bot.on('spawn', () => {
         bot.chat('/al');
         isConnected = true;
         console.log('Connecting to Anni Lobby...');
+    } else {
+        console.log('Connected to Anni Lobby.');
     }
 });
 
@@ -89,6 +92,7 @@ bot.on('playerJoined', async (player) => {
     }
 });
 
+// fastify methods
 server.get('/api/playerdata', async (request, reply) => {
     const playerInfo = await fireStore.get();
     if (typeof playerInfo === 'undefined') {
@@ -110,7 +114,13 @@ server.get<{ Params: { uuid: string } }>('/api/favorite/:uuid', async (requst, r
     return { data: 'Success' };
 });
 
-const startServer =async () => {
+server.get('/api/players', async (request, reply) => {
+    const num = await fireStore.getPlayerAmount();
+    reply.code(200);
+    return { data: num };
+});
+
+const startServer = async () => {
     try {
         await server.listen({ port: 2999 });
     } catch (e) {
@@ -118,6 +128,5 @@ const startServer =async () => {
         bot.end();
         exit(1);
     }
-}
-
+};
 startServer();
