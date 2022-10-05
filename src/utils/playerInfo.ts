@@ -22,7 +22,7 @@ export const getPlayerInfo = async (uuid: string) => {
         });
         const date = new Date();
         const currentUNIX = Date.now();
-        const currentDate = date.getFullYear().toString() + '/' + (date.getMonth() + 1).toString() + '/' + date.getDate().toString() + ' ' + date.getHours().toString + ':' + date.getMinutes().toString();
+        const currentDate = date.getFullYear().toString() + '/' + (date.getMonth() + 1).toString() + '/' + date.getDate().toString() + ' ' + date.getHours().toString() + ':' + date.getMinutes().toString();
         const playerInfo: PlayerInfo = {
             mcid: res.data.user.username,
             uuid: uuid,
