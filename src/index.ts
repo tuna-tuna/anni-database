@@ -5,8 +5,9 @@ import { exit } from 'process';
 import { getPlayerInfo } from './utils/playerInfo';
 import { FireStore } from './utils/db';
 import { FirebaseOptions } from 'firebase/app';
+import axios from 'axios';
 require('dotenv').config();
-const { MCUN, MCPW, API_KEY, AUTH_DOMAIN, PROJECT_ID, STORAGE_BUCKET, MESSAGING_SENDER_ID, APP_ID, MEASUREMENT_ID, FB_EMAIL, FB_PASS } = process.env;
+const { MCUN, MCPW, API_KEY, AUTH_DOMAIN, PROJECT_ID, STORAGE_BUCKET, MESSAGING_SENDER_ID, APP_ID, MEASUREMENT_ID, FB_EMAIL, FB_PASS, PJS_TOKEN } = process.env;
 
 let isConnected = false;
 const mcidRegex = /^[a-z|A-Z|0-9|_]{2,16}$/g;
@@ -103,8 +104,8 @@ server.get('/api/playerdata', async (request, reply) => {
     return { data: playerInfo };
 });
 
-server.get<{ Params: { uuid: string } }>('/api/favorite/:uuid', async (requst, reply) => {
-    const uuid = requst.params.uuid;
+server.get<{ Params: { uuid: string } }>('/api/favorite/:uuid', async (request, reply) => {
+    const uuid = request.params.uuid;
     const result = await fireStore.toggleFavorite(uuid);
     if (!result) {
         reply.code(400);
@@ -120,8 +121,74 @@ server.get('/api/players', async (request, reply) => {
     return { data: num };
 });
 
+server.get<{ Params: { mcid: string } }>('/api/playerstats/:mcid', async (request, reply) => {
+    const mcid = request.params.mcid;
+    const reqdata = { url: `https://shotbow.net/forum/stats/annihilation/${mcid}`, renderType: 'plainText', outputAsJson: true };
+    const res = await axios.get(`https://PhantomJsCloud.com/api/browser/v2/${PJS_TOKEN}/?request=${JSON.stringify(reqdata)}`);
+    const elems = res.data.content.data.split('\n');
+    
+    // PlayTime
+    const playTimeList = elems[10].replace('Time Played: ', '').match(/[0-9]+/g);
+    let playHour: number = 0, playMin: number = 0;
+    if (playTimeList !== null && playTimeList.length === 4) {
+        playHour = parseInt(playTimeList[0]) * 24 + parseInt(playTimeList[1]);
+        playMin = parseInt(playTimeList[2]);
+    } else if (playTimeList !== null && playTimeList.length === 3) {
+        playHour = parseInt(playTimeList[0]);
+        playMin = parseInt(playTimeList[1]);
+    }
+
+    // W/L
+    const winlose = elems[11].replace('Wins', '').replace(' Loses');
+
+    // BowKills
+    const bowKillsList = elems[13].match(/[0-9]+/g);
+    let bowKills = '';
+    if (bowKillsList !== null) {
+        bowKills = bowKillsList[0];
+    }
+
+    // MeleeKills
+    const meleeKillsList = elems[14].match(/[0-9]+/g);
+    let meleeKills = '';
+    if (meleeKillsList !== null) {
+        meleeKills = meleeKillsList[0];
+    }
+
+    // NexusDamage
+    const nexusDamageList = elems[15].match(/[0-9]+/g);
+    let nexusDamage = '';
+    if (nexusDamageList !== null) {
+        nexusDamage = nexusDamageList[0];
+    }
+
+    // OresMined
+    const oresMinedList = elems[16].match(/[0-9]+/g);
+    let oresMined = '';
+    if (oresMinedList !== null) {
+        oresMined = oresMinedList[0];
+    }
+
+    const rep: AnniStats = {
+        mcid: mcid,
+        playTime: {
+            playHour: playHour.toString(),
+            playMin: playMin.toString()
+        },
+        winLose: winlose,
+        bowKills: bowKills,
+        meleeKills: meleeKills,
+        nexusDamage: nexusDamage,
+        oresMined: oresMined
+    };
+
+    reply.code(200);
+    return { data: rep };
+});
+
 const startServer = async () => {
     try {
+        console.log('Starting Server...');
         await server.listen({ port: 2999 });
     } catch (e) {
         console.error('Error while listening to requests: \n', e);

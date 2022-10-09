@@ -38,6 +38,7 @@ export class FireStore{
                 alreadyExist = true;
                 const data = docSnap.data();
                 newData = data;
+                newData.mcid = playerInfo.mcid;
                 let index = 0;
                 data.history.map((nameHistory: NameHistory) => {
                     if (nameHistory.hidden === true) {
@@ -49,6 +50,13 @@ export class FireStore{
                     }
                     index++;
                 });
+                if (playerInfo.history.length > data.history.length) {
+                    playerInfo.history.map((nameHistory: NameHistory, index) => {
+                        if (index >= data.history.length) {
+                            newData.history.push(nameHistory);
+                        }
+                    });
+                }
             }
 
             // if record does not exist, simply add them; if already exist, update with newly created record

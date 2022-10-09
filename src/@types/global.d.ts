@@ -14,3 +14,16 @@ declare type NameHistory = {
     changedAt: string;
     hidden: boolean;
 };
+
+declare type AnniStats = {
+    mcid: string;
+    playTime: {
+        playHour: string;
+        playMin: string;
+    };
+    winLose: string;
+    bowKills: string;
+    meleeKills: string;
+    nexusDamage: string;
+    oresMined: string;
+}
