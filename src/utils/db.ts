@@ -86,6 +86,9 @@ export class FireStore{
                     const playerData = doc.data() as PlayerInfo;
                     reqdata.push(playerData);
                 });
+                reqdata.sort((a, b) => {
+                    return a.mcid > b.mcid ? 1 : -1;
+                });
                 this.lastModified = Date.now();
                 this.cachedData = reqdata;
                 console.log('Created Cache');
