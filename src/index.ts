@@ -11,6 +11,7 @@ const { MCUN, MCPW, API_KEY, AUTH_DOMAIN, PROJECT_ID, STORAGE_BUCKET, MESSAGING_
 
 let isConnected = false;
 const mcidRegex = /^[a-z|A-Z|0-9|_]{2,16}$/g;
+const statsStack: AnniStats[] = [];
 
 // check env is not undefined
 if (MCUN === undefined || MCPW === undefined || FB_EMAIL === undefined || FB_PASS === undefined) {
@@ -94,6 +95,10 @@ bot.on('playerJoined', async (player) => {
 });
 
 // fastify methods
+server.get('/', async (request, reply) => {
+    return 'Hey Why are you Here?';
+});
+
 server.get('/api/playerdata', async (request, reply) => {
     const playerInfo = await fireStore.get();
     if (typeof playerInfo === 'undefined') {
@@ -123,67 +128,115 @@ server.get('/api/players', async (request, reply) => {
 
 server.get<{ Params: { mcid: string } }>('/api/playerstats/:mcid', async (request, reply) => {
     const mcid = request.params.mcid;
-    const reqdata = { url: `https://shotbow.net/forum/stats/annihilation/${mcid}`, renderType: 'plainText', outputAsJson: true };
-    const res = await axios.get(`https://PhantomJsCloud.com/api/browser/v2/${PJS_TOKEN}/?request=${JSON.stringify(reqdata)}`);
-    const elems = res.data.content.data.split('\n');
-    
-    // PlayTime
-    const playTimeList = elems[10].replace('Time Played: ', '').match(/[0-9]+/g);
-    let playHour: number = 0, playMin: number = 0;
-    if (playTimeList !== null && playTimeList.length === 4) {
-        playHour = parseInt(playTimeList[0]) * 24 + parseInt(playTimeList[1]);
-        playMin = parseInt(playTimeList[2]);
-    } else if (playTimeList !== null && playTimeList.length === 3) {
-        playHour = parseInt(playTimeList[0]);
-        playMin = parseInt(playTimeList[1]);
-    }
-
-    // W/L
-    const winlose = elems[11].replace('Wins', '').replace(' Loses');
-
-    // BowKills
-    const bowKillsList = elems[13].match(/[0-9]+/g);
-    let bowKills = '';
-    if (bowKillsList !== null) {
-        bowKills = bowKillsList[0];
-    }
-
-    // MeleeKills
-    const meleeKillsList = elems[14].match(/[0-9]+/g);
-    let meleeKills = '';
-    if (meleeKillsList !== null) {
-        meleeKills = meleeKillsList[0];
-    }
-
-    // NexusDamage
-    const nexusDamageList = elems[15].match(/[0-9]+/g);
-    let nexusDamage = '';
-    if (nexusDamageList !== null) {
-        nexusDamage = nexusDamageList[0];
-    }
-
-    // OresMined
-    const oresMinedList = elems[16].match(/[0-9]+/g);
-    let oresMined = '';
-    if (oresMinedList !== null) {
-        oresMined = oresMinedList[0];
-    }
-
-    const rep: AnniStats = {
-        mcid: mcid,
+    let doneFlag = false;
+    let returnData: AnniStats = {
+        mcid: '',
         playTime: {
-            playHour: playHour.toString(),
-            playMin: playMin.toString()
+            playHour: '',
+            playMin: ''
         },
-        winLose: winlose,
-        bowKills: bowKills,
-        meleeKills: meleeKills,
-        nexusDamage: nexusDamage,
-        oresMined: oresMined
+        winLose: '',
+        bowKills: '',
+        meleeKills: '',
+        nexusDamage: '',
+        oresMined: '',
+        lastUpdate: 0
     };
+    statsStack.map((stats) => {
+        if (stats.mcid === mcid) {
+            if (Date.now() - stats.lastUpdate < 3600000) {
+                console.log('Used Cache');
+                doneFlag = true;
+                returnData = stats;
+            }
+        }
+    });
+    if (!doneFlag) {
+        const reqdata = { url: `https://shotbow.net/forum/stats/annihilation/${mcid}`, renderType: 'plainText', outputAsJson: true };
+        const res = await axios.get(`https://PhantomJsCloud.com/api/browser/v2/${PJS_TOKEN}/?request=${JSON.stringify(reqdata)}`);
+        const elems = res.data.content.data.split('\n');
 
+        if (elems[6] === 'No such user') {
+            reply.code(200);
+            const rep: AnniStats = {
+                mcid: mcid,
+                playTime: {
+                    playHour: '0',
+                    playMin: '0'
+                },
+                winLose: '0:0',
+                bowKills: '0',
+                meleeKills: '0',
+                nexusDamage: '0',
+                oresMined: '0',
+                lastUpdate: Date.now()
+            };
+            statsStack.push(rep);
+            return { data: rep };
+        }
+    
+        // PlayTime
+        const playTimeList = elems[10].replace('Time Played: ', '').match(/[0-9]+/g);
+        let playHour: number = 0, playMin: number = 0;
+        if (playTimeList !== null && playTimeList.length === 4) {
+            playHour = parseInt(playTimeList[0]) * 24 + parseInt(playTimeList[1]);
+            playMin = parseInt(playTimeList[2]);
+        } else if (playTimeList !== null && playTimeList.length === 3) {
+            playHour = parseInt(playTimeList[0]);
+            playMin = parseInt(playTimeList[1]);
+        }
+
+        // W/L
+        const winlose = elems[11].replace('Wins ', '').replace(' Losses', '');
+
+        // BowKills
+        const bowKillsList = elems[13].match(/[0-9]+/g);
+        let bowKills = '';
+        if (bowKillsList !== null) {
+            bowKills = bowKillsList[0];
+        }
+
+        // MeleeKills
+        const meleeKillsList = elems[14].match(/[0-9]+/g);
+        let meleeKills = '';
+        if (meleeKillsList !== null) {
+            meleeKills = meleeKillsList[0];
+        }
+
+        // NexusDamage
+        const nexusDamageList = elems[15].match(/[0-9]+/g);
+        let nexusDamage = '';
+        if (nexusDamageList !== null) {
+            nexusDamage = nexusDamageList[0];
+        }
+
+        // OresMined
+        const oresMinedList = elems[16].match(/[0-9]+/g);
+        let oresMined = '';
+        if (oresMinedList !== null) {
+            oresMined = oresMinedList[0];
+        }
+
+        const rep: AnniStats = {
+            mcid: mcid,
+            playTime: {
+                playHour: playHour.toString(),
+                playMin: playMin.toString()
+            },
+            winLose: winlose,
+            bowKills: bowKills,
+            meleeKills: meleeKills,
+            nexusDamage: nexusDamage,
+            oresMined: oresMined,
+            lastUpdate: Date.now()
+        };
+        statsStack.push(rep);
+
+        reply.code(200);
+        return { data: rep };
+    }
     reply.code(200);
-    return { data: rep };
+    return { data: returnData };
 });
 
 const startServer = async () => {

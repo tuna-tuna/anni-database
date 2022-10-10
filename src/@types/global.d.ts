@@ -26,4 +26,5 @@ declare type AnniStats = {
     meleeKills: string;
     nexusDamage: string;
     oresMined: string;
+    lastUpdate: number;
 }
